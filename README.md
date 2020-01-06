@@ -1,6 +1,7 @@
 # php7-mongodb
 PHP项目交流分享
 配置文件加上:
+
 在 components 数组内加配置如下
 'mongodb' => array(
     'class'            => 'EMongoDB', //主文件
