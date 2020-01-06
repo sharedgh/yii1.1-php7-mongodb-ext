@@ -19,9 +19,6 @@ class EMongoDB extends CApplicationComponent
      */
     public $connectionString;
     public $dbName = null;
-    public $fsyncFlag = false;
-    public $safeFlag = false;
-    public $useCursor = false;
     public $manager;
     public $bulk;
 
