@@ -5,7 +5,7 @@ PHP项目交流分享
 'mongodb' => array(
     'class'            => 'EMongoDB', //主文件
     'connectionString' => 'mongodb://root:123456@127.0.0.1:27017', //本地服务器地址
-    'dbName'           => 'admachine',//数据库名称
+    'dbName'           => 'testdb',//数据库名称
 ),
 
 扩展类目录extensions/mongodb文件目录清单: EMongoDB.php,EMongoDocument.php
