@@ -1,4 +1,4 @@
-# php7-mongodb
+# 自己造轮子php7 + yii1.1 mongodb扩展类 用法
 PHP项目交流分享
 配置文件加上:
 
@@ -13,8 +13,6 @@ PHP项目交流分享
 
 用法: 在model类里面继承操作类(EMongoDocument) 就可以正常使用了
 (注意 并不完全是yii1.1的用法 只是相似 mongodb 是区分数据类型的插入时用什么类型查询就要用什么类型不然查不出数据)
-
-自己造轮子php7 + yii1.1 mongodb扩展类 用法
 
 对象(object)用法:
 
