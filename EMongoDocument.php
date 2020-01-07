@@ -17,6 +17,36 @@ abstract class EMongoDocument extends CModel{
     private $writeConcern;
     private $execute = null;
     private $iswritepk = false;
+    const ASC = 1;
+    const DESC = -1;
+    public static $operators = array(
+        'greater'		=> '$gt',
+        '>'				=> '$gt',
+        'greatereq'		=> '$gte',
+        '>='			=> '$gte',
+        'less'			=> '$lt',
+        '<'				=> '$lt',
+        'lesseq'		=> '$lte',
+        '<='			=> '$lte',
+        'noteq'			=> '$ne',
+        '!='			=> '$ne',
+        '<>'			=> '$ne',
+        'in'			=> '$in',
+        'notin'			=> '$nin',
+        'all'			=> '$all',
+        'size'			=> '$size',
+        'type'			=> '$type',
+        'exists'		=> '$exists',
+        'notexists'		=> '$exists',
+        'elemmatch'		=> '$elemMatch',
+        'mod'			=> '$mod',
+        '%'				=> '$mod',
+        'equals'		=> '$eq',
+        'eq'			=> '$eq',
+        '=='			=> '$eq',
+        'where'			=> '$where',
+        'or'			=> '$or'
+    );
     public function __construct($scenario='insert')
     {
         $this->getMongoDBComponent()->getConnection();
@@ -180,6 +210,7 @@ abstract class EMongoDocument extends CModel{
     public function update($filter=array(),$attributes=array(),$updateOptions=array()){
         if(empty($filter) || empty($attributes))
             return false;
+        $this->getquery($attributes,$updateOptions);
         self::$_emongoDb->bulk->update($attributes, ['$set' => $filter],$updateOptions); # multi 为true批量更新  false 单条更新(默认) upsert 更新时查询没有是否新插入一条(true/false) 默认false
         return  $this->getexecute()->isAcknowledged()?$this->getexecute()->getModifiedCount():false;
     }
@@ -193,6 +224,7 @@ abstract class EMongoDocument extends CModel{
         if(!array_key_exists('limit',$deleteOptions))
             $deleteOptions['limit'] = true;
 
+        $this->getquery($filter,$deleteOptions);
         self::$_emongoDb->bulk->delete($filter,$deleteOptions); # limit true/false 默认为false   为false时删除所有匹配数据 true时只删除一条
         return  $this->getexecute()->isAcknowledged()?$this->getexecute()->getDeletedCount():false;
     }
@@ -202,21 +234,74 @@ abstract class EMongoDocument extends CModel{
         return  $this->delete($filter,$deleteOptions);
     }
 
-    public function find($filter=array(),$queryOptions=array('limit'=>true)){
+    public function find($filter=array(),$queryOptions=array('limit'=>1)){
         if(!array_key_exists('limit',$queryOptions))
-            $queryOptions['limit'] = true;
-
-        $query = new MongoDB\Driver\Query($filter, $queryOptions);#limit true/false 默认为false   为false时查询所有匹配数据 true时只查询一条
+            $queryOptions['limit'] = 1;
+        $this->getquery($filter,$queryOptions);
+        $query = new MongoDB\Driver\Query($filter, $queryOptions);#limit 查询条数 默认为0   为0时查询所有匹配数据
         $cursor = self::$_emongoDb->manager->executeQuery(self::$_emongoDb->dbName.'.'.$this->getCollectionName(), $query);
         $data = $cursor->toArray(); # 此函数只能调一次
-        if($queryOptions['limit'])
+        if($queryOptions['limit'] == 1)
             return isset($data)?$data[0]:false;
         else
             return isset($data)?$data:false;
     }
 
     public function findAll($filter=array(),$queryOptions=array()){
-        $queryOptions['limit'] = false;
+        if(!array_key_exists('limit',$queryOptions))
+            $queryOptions['limit'] = 0;
         return $this->find($filter,$queryOptions);
+    }
+
+    private function getquery(&$filter,&$queryOptions){
+        $zdarr = $this->attributeNames();
+        if(is_object($filter)){
+            $tmp = $filter;
+            $filter = [];
+            foreach ($tmp as $key=>$val){
+                if(!array_key_exists($key,$zdarr)){
+                    unset($filter->$key);
+                    $key = strtolower($key);
+                    if($key == 'order')
+                        $queryOptions['sort'] = $val;
+                    elseif(is_array($val))
+                        $this->chuli($filter,$key,$val);
+                    else
+                        $queryOptions[$key] = $val;
+                }else{
+                    if (is_array($val)){
+                        unset($filter->$key);
+                        $this->chuli($filter,$key,$val);
+                    }else{
+                        $filter[$key] = $val;
+                    }
+                }
+            }
+        }
+    }
+
+    private function chuli(&$filter,$key,$val){
+        foreach ($val as $k=>$v){
+            if($k == '$or' || $k == 'or'){
+                $filter['$or'] = $this->chuarr($key,$v);
+            }elseif($k == '$in' || $k == 'in'){
+                $filter[$key]['$in'] = is_array($v)?$v:[$v];
+            }elseif (array_key_exists($k, self::$operators)) {
+                $filter[$key] = array(self::$operators[$k] => $v);
+            }elseif(in_array($k,self::$operators)){
+                $filter[$key] = array($k => $v);
+            }
+        }
+    }
+
+    private function chuarr($key,$v){
+        $tmp=[];
+        if(is_array($v))
+            foreach ($v as $value){
+                $tmp[] = array($key=>$value);
+            }
+        else
+            $tmp[] = array($key=>$v);
+        return $tmp;
     }
 }
